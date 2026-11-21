@@ -1,5 +1,3 @@
-English | [日本語](./README.ja.md)
-
 # swift-app-config
 
 Change typed values in your app without shipping a new build, vary them by device values, and split
@@ -55,7 +53,7 @@ A set:
   "schema_version": 1, "project": "reading-memory", "version": 3, "published_at": 0,
   "flags": {
     "paywall_headline": { "type": "string", "default": "Keep every book",
-      "rules": [{ "when": { "fact": "lang", "eq": "ja" }, "value": "読書をもっと記録に" }] },
+      "rules": [{ "when": { "fact": "lang", "eq": "ja" }, "value": "Remember every book you read" }] },
     "paywall_hard": { "type": "bool", "default": false,
       "experiment": { "id": "paywall-hard-vs-soft", "starts_at": "2026-12-01T00:00:00Z", "ends_at": null,
         "metric": { "event": "purchase_completed", "within_hours": 168 },
