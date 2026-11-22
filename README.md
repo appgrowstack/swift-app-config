@@ -20,9 +20,14 @@ them into variants to compare, all decided on the device.
 - **Rules on device values.** The first rule whose condition matches (`eq`, `ne`, `in`, `not_in`,
   `gte`, `lte`, `exists`, with `all` / `any`) on `platform`, `app_version`, `build`, `channel`,
   `lang`, `region`, `days_since_first_seen` and your own values
+- **Versions resolved from what each build contains.** A rule or an experiment can carry an
+  `app_version` that the server resolved from the features it requires: per platform, a lowest version
+  `min` and the versions to leave out `exclude`. The device only checks its `platform` and
+  `app_version` against it; a platform with no range does not match. A rule needs `when`,
+  `app_version` or both; `requires` and `exclude_app_versions` are for the server and ignored here
 - **Experiments on the device.** Two to four weighted variants; the same person always gets the same
   variant; your own devices get the first. `config_exposed` is recorded the first time a key in a
-  running experiment is read in a launch
+  running experiment whose `app_version` fits the device is read in a launch
 - **Values only.** The set holds values, never screens or code. New screens ship in a build
 - **No dependencies.** Foundation only
 
@@ -65,8 +70,8 @@ A set:
 ## Documentation
 
 - Values are decided in this order: the key is missing, does not fit or has another type (your
-  default) → the first matching rule → the assigned variant of a running experiment → the flag's
-  default
+  default) → the first matching rule (its `app_version` and `when` both fit) → the assigned variant
+  of a running experiment whose `app_version` fits → the flag's default
 - The variant: `h = hash32("<project>:<person>:<experiment>:variant")` (FNV-1a over UTF-16 code
   units with murmur3's final mix); the first variant `i` with `h × W < (w₀ + … + wᵢ) × 2³²`
 - When the set has `global_holdout: true`, a person with

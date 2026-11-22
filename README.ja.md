@@ -15,7 +15,8 @@
 - **型で読む。** keyで`bool`・`int`・`double`・`string`・`json`を読む（`decode`で自分の型にもできる）。いつもアプリの既定の値を渡す。keyが無い・型が違う・形が合わないときは既定の値
 - **起動の間は変えない。**起動では前に保存した組か同梱の組を使う。新しい組は取って次の起動のために保存するので、画面の途中で値が変わらない
 - **端末の値の規則。**条件（`eq`・`ne`・`in`・`not_in`・`gte`・`lte`・`exists`と`all`・`any`）が最初に当たった規則の値。使える値は`platform`・`app_version`・`build`・`channel`・`lang`・`region`・`days_since_first_seen`と自分の値
-- **端末で決める実験。**重みの付いた2〜4つの案。同じ人はいつも同じ案で、自分の端末は最初の案。期間の中の実験のkeyを起動で初めて読んだときに`config_exposed`を記録する
+- **バージョンはビルドの中身から決まる。**規則と実験には、サーバーが要る機能から出した`app_version`を付けられる。中身はOSごとの一番小さいバージョン`min`と除くバージョン`exclude`。端末は自分の`platform`と`app_version`がその範囲に入るかだけを見る。範囲の無いOSには当たらない。規則には`when`か`app_version`の少なくとも片方が要る。`requires`と`exclude_app_versions`はサーバーが使う物で、端末は読まない
+- **端末で決める実験。**重みの付いた2〜4つの案。同じ人はいつも同じ案で、自分の端末は最初の案。期間の中で`app_version`が端末に合う実験のkeyを起動で初めて読んだときに`config_exposed`を記録する
 - **値だけ。**組は値だけを持ち、画面やコードを持たない。新しい画面はビルドで出す
 - **依存なし。** Foundationだけ
 
@@ -57,7 +58,7 @@ Task { await config.refresh() }                       // saved for the next laun
 
 ## 文書
 
-- 値はこの順に決める: keyが無い・形が合わない・型が違う（アプリの既定の値）→ 最初に当たった規則 → 期間の中の実験の割り当てた案 → フラグの既定の値
+- 値はこの順に決める: keyが無い・形が合わない・型が違う（アプリの既定の値）→ 最初に当たった規則（`app_version`と`when`の両方が合う）→ 期間の中で`app_version`が合う実験の割り当てた案 → フラグの既定の値
 - 案の割り当て: `h = hash32("<project>:<person>:<experiment>:variant")`（UTF-16の符号でFNV-1aに、murmur3の最後の混ぜ）。`h × W < (w₀ + … + wᵢ) × 2³²`になる最初の案`i`
 - 組の`global_holdout`が`true`のとき、`hash32("<project>:<person>:global_holdout") / 2³² < 0.05`の人は、期間の中の実験で最初の案の値になり（sourceは`global_holdout`）、`config_exposed`を記録しない。自分の端末は入らない
 - 記録: `config_exposed(key, experiment, variant, set_version, propensity, policy_version)`（その案を選んだ確率と、組のversion）と、`config_rejected(key, reason, set_version)`（理由は`parse_error`・`schema_too_new`・`invalid`・`type_mismatch`）。どちらも起動ごとに1回

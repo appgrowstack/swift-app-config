@@ -19,9 +19,16 @@ public enum ConfigFlagType: String, Sendable, Hashable, CaseIterable {
 /// One flag of a set, read and checked. A flag that does not fit its schema is skipped with
 /// `config_rejected(invalid)` when the app reads its key.
 struct ConfigFlag: Sendable {
+    /// Matches when the device's version fits `appVersion` (when set) and `when` (when set)
+    /// evaluates to yes. At least one of the two is set.
     struct Rule: Sendable {
-        let when: ConfigCondition
+        let when: ConfigCondition?
+        let appVersion: [String: ConfigVersionRange]?
         let value: ConfigJSON
+
+        func matches(_ facts: [String: ConfigJSON]) -> Bool {
+            ConfigVersionRange.fits(appVersion, facts: facts) && (when?.evaluate(facts) ?? true)
+        }
     }
 
     struct Variant: Sendable {
@@ -35,9 +42,11 @@ struct ConfigFlag: Sendable {
         let variants: [Variant]
         let startsAt: Date
         let endsAt: Date?
+        let appVersion: [String: ConfigVersionRange]?
 
-        func isRunning(at now: Date) -> Bool {
-            now >= startsAt && (endsAt.map { now < $0 } ?? true)
+        /// Within its period, and the device's version fits `appVersion` (when set).
+        func applies(at now: Date, facts: [String: ConfigJSON]) -> Bool {
+            now >= startsAt && (endsAt.map { now < $0 } ?? true) && ConfigVersionRange.fits(appVersion, facts: facts)
         }
     }
 
@@ -49,6 +58,8 @@ struct ConfigFlag: Sendable {
     let experiment: Experiment?
 
     private static let keys: Set<String> = ["type", "default", "rules", "experiment"]
+    /// `requires` and `exclude_app_versions` are what core resolves into `app_version`; the device does not read them.
+    private static let ruleKeys: Set<String> = ["when", "value", "requires", "exclude_app_versions", "app_version"]
     private static var name: Regex<Substring> { /^[a-z0-9_]{1,40}$/ }
     private static var experimentID: Regex<Substring> { /^[a-z0-9-]{3,40}$/ }
 
@@ -62,12 +73,16 @@ struct ConfigFlag: Sendable {
         if let raw = object["rules"] {
             guard let list = raw.array, list.count <= 30 else { throw Invalid() }
             for item in list {
-                guard let rule = item.object, rule.count == 2, let value = rule["value"], type.fits(value) else { throw Invalid() }
+                guard let rule = item.object, rule.keys.allSatisfy(Self.ruleKeys.contains),
+                      rule["when"] != nil || rule["app_version"] != nil,
+                      let value = rule["value"], type.fits(value) else { throw Invalid() }
+                let when: ConfigCondition?
                 do {
-                    rules.append(Rule(when: try ConfigCondition.parse(rule["when"]), value: value))
+                    when = try rule["when"].map { try ConfigCondition.parse($0) }
                 } catch {
                     throw Invalid()
                 }
+                rules.append(Rule(when: when, appVersion: try Self.appVersion(rule), value: value))
             }
         }
         self.rules = rules
@@ -94,7 +109,14 @@ struct ConfigFlag: Sendable {
             endsAt = date
         default: throw Invalid()
         }
-        return Experiment(id: id, variants: variants, startsAt: startsAt, endsAt: endsAt)
+        return Experiment(id: id, variants: variants, startsAt: startsAt, endsAt: endsAt, appVersion: try appVersion(object))
+    }
+
+    /// A rule's or an experiment's `app_version` (the range core resolved). `nil` when not written.
+    private static func appVersion(_ object: [String: ConfigJSON]) throws -> [String: ConfigVersionRange]? {
+        guard let json = object["app_version"] else { return nil }
+        guard let ranges = ConfigVersionRange.platforms(json) else { throw Invalid() }
+        return ranges
     }
 }
 

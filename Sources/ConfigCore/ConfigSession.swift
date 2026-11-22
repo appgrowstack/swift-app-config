@@ -5,8 +5,8 @@ import Foundation
 ///
 /// For each read: a key not in the set gives the app's default; a flag that does not fit its schema
 /// or has another type gives the app's default and records `config_rejected`; then the first
-/// matching rule; then the assigned variant of a running experiment (recording `config_exposed` the
-/// first time this launch); then the flag's default.
+/// matching rule; then the assigned variant of a running experiment whose `app_version` fits the
+/// device (recording `config_exposed` the first time this launch); then the flag's default.
 public final class ConfigSession: @unchecked Sendable {
     public static let schemaVersion = 1
 
@@ -109,10 +109,10 @@ public final class ConfigSession: @unchecked Sendable {
             record(.rejected(key: key, reason: .typeMismatch, setVersion: set.version))
             return miss
         }
-        if let rule = flag.rules.first(where: { $0.when.evaluate(facts) }) {
+        if let rule = flag.rules.first(where: { $0.matches(facts) }) {
             return ConfigRead(key: key, value: rule.value, source: .rule, variant: nil)
         }
-        if let experiment = flag.experiment, experiment.isRunning(at: now) {
+        if let experiment = flag.experiment, experiment.applies(at: now, facts: facts) {
             // The product-wide holdout (R10): the first variant (today's value), with no `config_exposed`.
             if set.globalHoldout, ConfigVariant.inGlobalHoldout(project: set.project, person: person, internalDevice: internalDevice) {
                 return ConfigRead(key: key, value: experiment.variants[0].value, source: .globalHoldout, variant: nil)

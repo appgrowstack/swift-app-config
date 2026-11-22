@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** a rule may have only `when`, `value`, `requires`, `exclude_app_versions` and
+  `app_version`, and needs `when`, `app_version` or both; otherwise the flag is `invalid`.
+- A rule or an experiment may carry `app_version`, the range the server resolved from what each
+  build contains: per platform `{ "min": "<version>", "exclude": ["<version>", …] }`, each version
+  two or three groups of digits. An unreadable one makes the flag `invalid`. A rule matches only when
+  the device's `platform` and `app_version` fall in it; an experiment outside it is skipped (the
+  flag's default, no `config_exposed`). `requires` and `exclude_app_versions` are not read on the device.
+
 ## [0.1.0] - 2026-11-22
 
 ### Added
