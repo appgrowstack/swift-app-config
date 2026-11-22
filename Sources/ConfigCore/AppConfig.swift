@@ -5,7 +5,7 @@ public enum ConfigSDK {
     /// The package name (`swift-app-config`).
     public static let name = "swift-app-config"
     /// The released version: the newest `## [x.y.z]` section of the CHANGELOG (a test checks it).
-    public static let version = "0.1.0"
+    public static let version = "0.2.0"
 }
 
 /// Typed values by key, fixed for the launch.
