@@ -59,7 +59,8 @@ Task { await config.refresh() }                       // saved for the next laun
 
 - 値はこの順に決める: keyが無い・形が合わない・型が違う（アプリの既定の値）→ 最初に当たった規則 → 期間の中の実験の割り当てた案 → フラグの既定の値
 - 案の割り当て: `h = hash32("<project>:<person>:<experiment>:variant")`（UTF-16の符号でFNV-1aに、murmur3の最後の混ぜ）。`h × W < (w₀ + … + wᵢ) × 2³²`になる最初の案`i`
-- 記録: `config_exposed(key, experiment, variant, set_version)`と、`config_rejected(key, reason, set_version)`（理由は`parse_error`・`schema_too_new`・`invalid`・`type_mismatch`）。どちらも起動ごとに1回
+- 組の`global_holdout`が`true`のとき、`hash32("<project>:<person>:global_holdout") / 2³² < 0.05`の人は、期間の中の実験で最初の案の値になり（sourceは`global_holdout`）、`config_exposed`を記録しない。自分の端末は入らない
+- 記録: `config_exposed(key, experiment, variant, set_version, propensity, policy_version)`（その案を選んだ確率と、組のversion）と、`config_rejected(key, reason, set_version)`（理由は`parse_error`・`schema_too_new`・`invalid`・`type_mismatch`）。どちらも起動ごとに1回
 - `ConfigTesting`に`FakeConfigSetSource`・`MemoryConfigStorage`・`RecordingConfigSink`がある
 
 ## 入れ方

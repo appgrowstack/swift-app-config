@@ -69,7 +69,11 @@ A set:
   default
 - The variant: `h = hash32("<project>:<person>:<experiment>:variant")` (FNV-1a over UTF-16 code
   units with murmur3's final mix); the first variant `i` with `h × W < (w₀ + … + wᵢ) × 2³²`
-- Records: `config_exposed(key, experiment, variant, set_version)` and
+- When the set has `global_holdout: true`, a person with
+  `hash32("<project>:<person>:global_holdout") / 2³² < 0.05` gets the first variant of every running
+  experiment (source `global_holdout`) and records no `config_exposed`. Your own devices are never in it
+- Records: `config_exposed(key, experiment, variant, set_version, propensity, policy_version)` (the
+  chance of the variant, and the set's version) and
   `config_rejected(key, reason, set_version)` with `parse_error`, `schema_too_new`, `invalid`,
   `type_mismatch`. Each once per launch
 - `ConfigTesting` has `FakeConfigSetSource`, `MemoryConfigStorage` and `RecordingConfigSink`

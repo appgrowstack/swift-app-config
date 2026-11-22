@@ -2,7 +2,8 @@
 public enum ConfigEvent: Sendable, Hashable {
     /// A key inside a running experiment was read for the first time this launch. Variants are
     /// counted over these people.
-    case exposed(key: String, experiment: String, variant: String, setVersion: Int)
+    /// `propensity` is the chance of the variant; `policy_version` is the set's version (R10).
+    case exposed(key: String, experiment: String, variant: String, setVersion: Int, propensity: Double)
     /// The set or a key could not be used. Once per key, reason and set version.
     case rejected(key: String, reason: RejectReason, setVersion: Int)
 
@@ -28,8 +29,9 @@ public enum ConfigEvent: Sendable, Hashable {
     /// The event's parameters, typed.
     public var parameters: [String: ConfigJSON] {
         switch self {
-        case let .exposed(key, experiment, variant, setVersion):
-            ["key": .string(key), "experiment": .string(experiment), "variant": .string(variant), "set_version": .int(setVersion)]
+        case let .exposed(key, experiment, variant, setVersion, propensity):
+            ["key": .string(key), "experiment": .string(experiment), "variant": .string(variant), "set_version": .int(setVersion),
+             "propensity": .double(propensity), "policy_version": .int(setVersion)]
         case let .rejected(key, reason, setVersion):
             ["key": .string(key), "reason": .string(reason.rawValue), "set_version": .int(setVersion)]
         }
@@ -44,6 +46,8 @@ public enum ConfigValueSource: String, Sendable, Hashable {
     case rule
     /// The variant assigned in a running experiment.
     case experiment
+    /// The person is in the product-wide holdout (R10): the experiment's first variant, not recorded.
+    case globalHoldout = "global_holdout"
     /// The flag's default in the set.
     case `default`
 }

@@ -14,6 +14,8 @@ public final class ConfigSession: @unchecked Sendable {
         let project: String
         let version: Int
         let flags: [String: ConfigJSON]
+        /// Applies the product-wide holdout (R10).
+        let globalHoldout: Bool
     }
 
     private let lock = NSLock()
@@ -47,7 +49,7 @@ public final class ConfigSession: @unchecked Sendable {
         guard let object = json?.object, object["schema_version"]?.int == schemaVersion,
               let project = object["project"]?.string, let version = object["version"]?.int,
               let flags = object["flags"]?.object else { return nil }
-        return LoadedSet(project: project, version: version, flags: flags)
+        return LoadedSet(project: project, version: version, flags: flags, globalHoldout: object["global_holdout"]?.bool ?? false)
     }
 
     private static func load(_ data: Data?, stored: Data?, rejected: inout ConfigEvent?) -> LoadedSet? {
@@ -74,7 +76,7 @@ public final class ConfigSession: @unchecked Sendable {
     private func record(_ event: ConfigEvent) {
         let id: String
         switch event {
-        case let .exposed(key, _, _, _): id = "e:\(key)"
+        case let .exposed(key, _, _, _, _): id = "e:\(key)"
         case let .rejected(key, reason, version): id = "r:\(key):\(reason.rawValue):\(version)"
         }
         guard sent.insert(id).inserted else { return }
@@ -111,11 +113,17 @@ public final class ConfigSession: @unchecked Sendable {
             return ConfigRead(key: key, value: rule.value, source: .rule, variant: nil)
         }
         if let experiment = flag.experiment, experiment.isRunning(at: now) {
+            // The product-wide holdout (R10): the first variant (today's value), with no `config_exposed`.
+            if set.globalHoldout, ConfigVariant.inGlobalHoldout(project: set.project, person: person, internalDevice: internalDevice) {
+                return ConfigRead(key: key, value: experiment.variants[0].value, source: .globalHoldout, variant: nil)
+            }
+            let weights = experiment.variants.map(\.weight)
             let index = ConfigVariant.index(project: set.project, person: person, experiment: experiment.id,
-                                            weights: experiment.variants.map(\.weight), internalDevice: internalDevice)
+                                            weights: weights, internalDevice: internalDevice)
             let chosen = experiment.variants[index]
             if exposed.insert(key).inserted {
-                record(.exposed(key: key, experiment: experiment.id, variant: chosen.name, setVersion: set.version))
+                let propensity = ConfigVariant.propensity(weights: weights, index: index, internalDevice: internalDevice)
+                record(.exposed(key: key, experiment: experiment.id, variant: chosen.name, setVersion: set.version, propensity: propensity))
             }
             return ConfigRead(key: key, value: chosen.value, source: .experiment, variant: chosen.name)
         }
