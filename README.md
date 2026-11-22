@@ -86,7 +86,7 @@ A set:
 ## Installation
 
 ```swift
-.package(url: "https://github.com/appgrowstack/swift-app-config.git", .upToNextMinor(from: "0.1.0"))
+.package(url: "https://github.com/appgrowstack/swift-app-config.git", .upToNextMinor(from: "0.2.0"))
 ```
 
 ## Requirements

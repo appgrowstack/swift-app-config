@@ -67,7 +67,7 @@ Task { await config.refresh() }                       // saved for the next laun
 ## 入れ方
 
 ```swift
-.package(url: "https://github.com/appgrowstack/swift-app-config.git", .upToNextMinor(from: "0.1.0"))
+.package(url: "https://github.com/appgrowstack/swift-app-config.git", .upToNextMinor(from: "0.2.0"))
 ```
 
 ## 動く環境
